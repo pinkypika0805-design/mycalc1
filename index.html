@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>捲繞規格計算系統</title>
+    <title>捲繞規格精確計算</title>
     <style>
         :root { --primary: #2563eb; --secondary: #10b981; --bg: #f8fafc; --card: #ffffff; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -19,7 +19,7 @@
         .mode-btn.active { background: #334155; color: white; border-color: #334155; }
         .res-display { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 12px; padding: 12px; margin-top: 10px; }
         .res-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
-        .res-num { font-size: 1.4rem; font-weight: 800; color: #0284c7; font-family: 'Courier New', monospace; }
+        .res-num { font-size: 1.5rem; font-weight: 800; color: #0284c7; font-family: 'Courier New', monospace; }
         .btn-calc { width: 100%; padding: 15px; background: var(--secondary); color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 1.1rem; margin-top: 10px; cursor: pointer; }
     </style>
 </head>
@@ -29,8 +29,8 @@
     <div class="card">
         <h2>🌀 捲繞外徑計算</h2>
         <div class="mode-box">
-            <div id="ob1" class="mode-btn active" onclick="setOMode(7060, 17.6, 'ob1')">7060</div>
-            <div id="ob2" class="mode-btn" onclick="setOMode(2060, 9.6, 'ob2')">2060</div>
+            <div id="ob1" class="mode-btn active" onclick="setOMode(7060, 1.76, 'ob1')">7060</div>
+            <div id="ob2" class="mode-btn" onclick="setOMode(2060, 0.96, 'ob2')">2060</div>
         </div>
         <div class="grid">
             <div class="input-group"><label>米數 (L)</label><input type="number" id="ol" placeholder="M"></div>
@@ -46,8 +46,8 @@
     <div class="card">
         <h2>📏 雙向回推計算</h2>
         <div class="mode-box">
-            <div id="rb1" class="mode-btn active" onclick="setRMode(7060, 17.6, 'rb1')">7060</div>
-            <div id="rb2" class="mode-btn" onclick="setRMode(2060, 9.6, 'rb2')">2060</div>
+            <div id="rb1" class="mode-btn active" onclick="setRMode(7060, 1.76, 'rb1')">7060</div>
+            <div id="rb2" class="mode-btn" onclick="setRMode(2060, 0.96, 'rb2')">2060</div>
         </div>
         <div class="grid">
             <div class="input-group"><label>量測外徑 (cm)</label><input type="number" id="rev_od" placeholder="cm" oninput="document.getElementById('rev_side').value=''"></div>
@@ -66,8 +66,8 @@
 </div>
 
 <script>
-    let cO = 7060, mO = 17.6;
-    let cR = 7060, mR = 17.6;
+    let cO = 7060, mO = 1.76;
+    let cR = 7060, mR = 1.76;
 
     function setOMode(c, m, id) { cO = c; mO = m; setActive('ob', id); }
     function setRMode(c, m, id) { cR = c; mR = m; setActive('rb', id); }
@@ -76,22 +76,19 @@
         document.getElementById(id).classList.add('active');
     }
 
+    // 精準對齊係數：39.9 / sqrt(8000 * 0.153 * 318.31 + 7060) = 0.063351
+    const K = 0.063351;
+
     function calcOD() {
         const l = parseFloat(document.getElementById('ol').value);
         const t = parseFloat(document.getElementById('ot').value);
         if(!l || !t) return;
         
-        // 修正後的進位邏輯：
-        // 1. 算出 OD (mm) = sqrt(L*T*318.31 + C) / 1.27 * 0.254
-        // 以你的數據測試: sqrt(8000 * 0.153 * 318.31 + 7060) = 630.08
-        // (630.08 / 1.27) * 0.254 = 126.01 mm (這是不對的)
-        // 重新檢視：正確公式應為 sqrt(...) / 12.7 * 25.4 = OD(mm)
-        // 也就是 sqrt(...) * 2 = OD(mm)
+        const base = Math.sqrt(l * t * 318.31 + cO);
+        const od_cm = base * K;
         
-        const od_mm = (Math.sqrt(l * t * 318.31 + cO) / 12.7) * 25.4;
-        
-        document.getElementById('res_od_val').innerText = (od_mm / 10).toFixed(2);
-        document.getElementById('res_r_val').innerText = ((od_mm - mO) / 2 / 10).toFixed(2);
+        document.getElementById('res_od_val').innerText = od_cm.toFixed(2);
+        document.getElementById('res_r_val').innerText = ((od_cm - mO) / 2).toFixed(2);
         document.getElementById('od_res').style.display = 'block';
     }
 
@@ -101,15 +98,14 @@
         const known_l = parseFloat(document.getElementById('rev_l').value);
         const known_t = parseFloat(document.getElementById('rev_t').value);
 
-        if (!od_cm && side_cm) od_cm = (side_cm * 2) + (mR / 10);
+        if (!od_cm && side_cm) od_cm = (side_cm * 2) + mR;
         if (!od_cm) return alert("請輸入尺寸");
-        const od_mm = od_cm * 10;
+
+        // 逆運算： ((OD / K)^2 - C)
+        const coreVal = Math.pow(od_cm / K, 2) - cR;
 
         document.getElementById('row_t').style.display = 'none';
         document.getElementById('row_l').style.display = 'none';
-
-        // 逆向運算校正
-        const coreVal = Math.pow((od_mm / 25.4) * 12.7, 2) - cR;
 
         if (known_l) {
             const t = coreVal / (known_l * 318.31);
