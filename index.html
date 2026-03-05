@@ -19,7 +19,7 @@
         .mode-btn.active { background: #334155; color: white; border-color: #334155; }
         .res-display { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 12px; padding: 12px; margin-top: 10px; }
         .res-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
-        .res-num { font-size: 1.5rem; font-weight: 800; color: #0284c7; font-family: 'Courier New', monospace; }
+        .res-num { font-size: 1.4rem; font-weight: 800; color: #0284c7; font-family: 'Courier New', monospace; }
         .btn-calc { width: 100%; padding: 15px; background: var(--secondary); color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 1.1rem; margin-top: 10px; cursor: pointer; }
     </style>
 </head>
@@ -29,8 +29,8 @@
     <div class="card">
         <h2>🌀 捲繞外徑計算</h2>
         <div class="mode-box">
-            <div id="ob1" class="mode-btn active" onclick="setOMode(7060, 1.76, 'ob1')">7060</div>
-            <div id="ob2" class="mode-btn" onclick="setOMode(2060, 0.96, 'ob2')">2060</div>
+            <div id="ob1" class="mode-btn active" onclick="setOMode(7060, 17.6, 'ob1')">7060</div>
+            <div id="ob2" class="mode-btn" onclick="setOMode(2060, 9.6, 'ob2')">2060</div>
         </div>
         <div class="grid">
             <div class="input-group"><label>米數 (L)</label><input type="number" id="ol" placeholder="M"></div>
@@ -46,12 +46,12 @@
     <div class="card">
         <h2>📏 雙向回推計算</h2>
         <div class="mode-box">
-            <div id="rb1" class="mode-btn active" onclick="setRMode(7060, 1.76, 'rb1')">7060</div>
-            <div id="rb2" class="mode-btn" onclick="setRMode(2060, 0.96, 'rb2')">2060</div>
+            <div id="rb1" class="mode-btn active" onclick="setRMode(7060, 17.6, 'rb1')">7060</div>
+            <div id="rb2" class="mode-btn" onclick="setRMode(2060, 9.6, 'rb2')">2060</div>
         </div>
         <div class="grid">
             <div class="input-group"><label>量測外徑 (cm)</label><input type="number" id="rev_od" placeholder="cm" oninput="document.getElementById('rev_side').value=''"></div>
-            <div class="input-group"><label>量測單邊半徑 (cm)</label><input type="number" id="rev_side" placeholder="cm" oninput="document.getElementById('rev_od').value=''"></div>
+            <div class="input-group"><label>單邊半徑 (cm)</label><input type="number" id="rev_side" placeholder="cm" oninput="document.getElementById('rev_od').value=''"></div>
         </div>
         <div class="grid" style="margin-top:10px; border-top:1px dashed #eee; padding-top:10px;">
             <div class="input-group"><label>已知米數 (L)</label><input type="number" id="rev_l" placeholder="M" oninput="document.getElementById('rev_t').value=''"></div>
@@ -66,8 +66,8 @@
 </div>
 
 <script>
-    let cO = 7060, mO = 1.76;
-    let cR = 7060, mR = 1.76;
+    let cO = 7060, mO = 17.6;
+    let cR = 7060, mR = 17.6;
 
     function setOMode(c, m, id) { cO = c; mO = m; setActive('ob', id); }
     function setRMode(c, m, id) { cR = c; mR = m; setActive('rb', id); }
@@ -76,19 +76,22 @@
         document.getElementById(id).classList.add('active');
     }
 
-    // 基於 8000M/0.153T = 39.9cm 校正後的公式
     function calcOD() {
         const l = parseFloat(document.getElementById('ol').value);
         const t = parseFloat(document.getElementById('ot').value);
         if(!l || !t) return;
         
-        // 校正係數：39.9 / sqrt(8000*0.153*318.31 + 7060) ≈ 0.06334
-        // 套回原始公式：sqrt(...) * 0.06334 = OD (cm)
-        const val = Math.sqrt(l * t * 318.31 + cO);
-        const od_cm = val * 0.06337; 
+        // 修正後的進位邏輯：
+        // 1. 算出 OD (mm) = sqrt(L*T*318.31 + C) / 1.27 * 0.254
+        // 以你的數據測試: sqrt(8000 * 0.153 * 318.31 + 7060) = 630.08
+        // (630.08 / 1.27) * 0.254 = 126.01 mm (這是不對的)
+        // 重新檢視：正確公式應為 sqrt(...) / 12.7 * 25.4 = OD(mm)
+        // 也就是 sqrt(...) * 2 = OD(mm)
         
-        document.getElementById('res_od_val').innerText = od_cm.toFixed(2);
-        document.getElementById('res_r_val').innerText = ((od_cm - mO) / 2).toFixed(2);
+        const od_mm = (Math.sqrt(l * t * 318.31 + cO) / 12.7) * 25.4;
+        
+        document.getElementById('res_od_val').innerText = (od_mm / 10).toFixed(2);
+        document.getElementById('res_r_val').innerText = ((od_mm - mO) / 2 / 10).toFixed(2);
         document.getElementById('od_res').style.display = 'block';
     }
 
@@ -98,14 +101,15 @@
         const known_l = parseFloat(document.getElementById('rev_l').value);
         const known_t = parseFloat(document.getElementById('rev_t').value);
 
-        if (!od_cm && side_cm) od_cm = (side_cm * 2) + mR;
+        if (!od_cm && side_cm) od_cm = (side_cm * 2) + (mR / 10);
         if (!od_cm) return alert("請輸入尺寸");
-
-        // 逆向係數： (OD / 0.06337)^2
-        const coreVal = Math.pow(od_cm / 0.06337, 2) - cR;
+        const od_mm = od_cm * 10;
 
         document.getElementById('row_t').style.display = 'none';
         document.getElementById('row_l').style.display = 'none';
+
+        // 逆向運算校正
+        const coreVal = Math.pow((od_mm / 25.4) * 12.7, 2) - cR;
 
         if (known_l) {
             const t = coreVal / (known_l * 318.31);
