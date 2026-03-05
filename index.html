@@ -18,14 +18,12 @@
         .mode-btn { flex: 1; padding: 15px; border: 2px solid #eee; border-radius: 12px; text-align: center; cursor: pointer; font-weight: bold; background: #fff; color: #666; transition: 0.2s; }
         .mode-btn.active { background: #333; color: white; border-color: #333; }
         .calc-btn { width: 100%; padding: 18px; background: #28a745; color: white; border: none; border-radius: 12px; font-size: 1.3rem; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.2s; }
-        .calc-btn:active { transform: scale(0.98); background: #218838; }
-        .res-container { margin-top: 25px; background: #fff9db; border: 2px solid #ffec99; border-radius: 15px; padding: 20px; display: none; animation: fadeIn 0.4s; }
+        .res-container { margin-top: 25px; background: #fff9db; border: 2px solid #ffec99; border-radius: 15px; padding: 20px; display: none; }
         .res-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid rgba(0,0,0,0.05); }
-        .res-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .res-row:last-child { border-bottom: none; }
         .res-label { color: #666; font-size: 1.1rem; }
-        .res-val { font-size: 1.6rem; font-weight: 900; color: #d9480f; font-family: 'Courier New', Courier, monospace; }
+        .res-val { font-size: 1.6rem; font-weight: 900; color: #d9480f; font-family: 'Courier New', monospace; }
         .res-val.main { color: #1971c2; font-size: 2rem; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
@@ -35,18 +33,18 @@
     
     <div class="input-group">
         <label>米數 (L)</label>
-        <input type="number" id="L" placeholder="例如: 1000" inputmode="decimal">
+        <input type="number" id="L" placeholder="輸入長度" inputmode="decimal">
     </div>
     
     <div class="input-group">
         <label>厚度 (T)</label>
-        <input type="number" id="T" placeholder="例如: 0.05" inputmode="decimal">
+        <input type="number" id="T" placeholder="輸入厚度" inputmode="decimal">
     </div>
     
-    <span class="mode-label">選擇捲心規格 (C)</span>
+    <span class="mode-label">選擇規格 (C)</span>
     <div class="mode-box">
         <div id="c7060" class="mode-btn active" onclick="setMode(7060, 17.6, 'c7060')">7060 (-17.6)</div>
-        <div id="c2060" class="mode-btn" onclick="setMode(2060, 9.3, 'c2060')">2060 (-9.3)</div>
+        <div id="c2060" class="mode-btn" onclick="setMode(2060, 9.6, 'c2060')">2060 (-9.6)</div>
     </div>
 
     <button class="calc-btn" onclick="calculate()">執行計算</button>
@@ -68,11 +66,9 @@
 </div>
 
 <script>
-    // 預設值
     var C = 7060;
     var M = 17.6;
 
-    // 切換規格函數
     function setMode(val, minus, id) {
         C = val;
         M = minus;
@@ -80,44 +76,28 @@
             btn.classList.remove('active');
         });
         document.getElementById(id).classList.add('active');
-        
-        // 如果結果框已經顯示，切換時自動重算
-        if (document.getElementById('result').style.display === 'block') {
-            calculate();
-        }
+        if (document.getElementById('result').style.display === 'block') calculate();
     }
 
-    // 主計算函數
     function calculate() {
-        var lInput = document.getElementById('L').value;
-        var tInput = document.getElementById('T').value;
-        
-        if (!lInput || !tInput) {
-            alert("請完整輸入米數與厚度！");
-            return;
-        }
+        var lVal = document.getElementById('L').value;
+        var tVal = document.getElementById('T').value;
+        if (!lVal || !tVal) { alert("請填寫數值"); return; }
 
-        var l = parseFloat(lInput);
-        var t = parseFloat(tInput);
+        var l = parseFloat(lVal);
+        var t = parseFloat(tVal);
 
-        // 公式 1: 外徑 (OD) = sqrt(L * T * 318.31 + C) / 12.7 * 2.54
+        // 外徑計算公式
         var od = (Math.sqrt((l * t * 318.31) + C) / 12.7) * 2.54;
-        
-        // 公式 2: 半徑 = (外徑 - 扣除值) / 2
+        // 半徑計算公式 (外徑 - 扣除值) / 2
         var radius = (od - M) / 2;
-        
-        // 公式 3: 捲徑 (周長) = 外徑 * 3.1416
+        // 外周長計算公式 (外徑 * 3.1416)
         var circum = od * 3.1416;
 
-        // 填入數值並顯示
         document.getElementById('v1').innerText = od.toFixed(2);
         document.getElementById('v2').innerText = radius.toFixed(2);
         document.getElementById('v3').innerText = circum.toFixed(2);
-        
         document.getElementById('result').style.display = 'block';
-        
-        // 平滑滾動到結果區域
-        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     }
 </script>
 
