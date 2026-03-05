@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>捲繞規格精確計算</title>
+    <title>捲繞規格計算系統</title>
     <style>
         :root { --primary: #2563eb; --secondary: #10b981; --bg: #f8fafc; --card: #ffffff; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -51,7 +51,7 @@
         </div>
         <div class="grid">
             <div class="input-group"><label>量測外徑 (cm)</label><input type="number" id="rev_od" placeholder="cm" oninput="document.getElementById('rev_side').value=''"></div>
-            <div class="input-group"><label>單邊半徑 (cm)</label><input type="number" id="rev_side" placeholder="cm" oninput="document.getElementById('rev_od').value=''"></div>
+            <div class="input-group"><label>量測單邊半徑 (cm)</label><input type="number" id="rev_side" placeholder="cm" oninput="document.getElementById('rev_od').value=''"></div>
         </div>
         <div class="grid" style="margin-top:10px; border-top:1px dashed #eee; padding-top:10px;">
             <div class="input-group"><label>已知米數 (L)</label><input type="number" id="rev_l" placeholder="M" oninput="document.getElementById('rev_t').value=''"></div>
@@ -76,17 +76,14 @@
         document.getElementById(id).classList.add('active');
     }
 
-    // 精準對齊係數：39.9 / sqrt(8000 * 0.153 * 318.31 + 7060) = 0.063351
-    const K = 0.063351;
+    const K = 0.063351; // 鎖定你提供的 39.9cm 基準
 
     function calcOD() {
         const l = parseFloat(document.getElementById('ol').value);
         const t = parseFloat(document.getElementById('ot').value);
         if(!l || !t) return;
-        
         const base = Math.sqrt(l * t * 318.31 + cO);
         const od_cm = base * K;
-        
         document.getElementById('res_od_val').innerText = od_cm.toFixed(2);
         document.getElementById('res_r_val').innerText = ((od_cm - mO) / 2).toFixed(2);
         document.getElementById('od_res').style.display = 'block';
@@ -98,10 +95,10 @@
         const known_l = parseFloat(document.getElementById('rev_l').value);
         const known_t = parseFloat(document.getElementById('rev_t').value);
 
+        // 如果輸入的是單邊半徑(cm)，換算成總徑(cm)
         if (!od_cm && side_cm) od_cm = (side_cm * 2) + mR;
-        if (!od_cm) return alert("請輸入尺寸");
+        if (!od_cm) return alert("請輸入量測數值");
 
-        // 逆運算： ((OD / K)^2 - C)
         const coreVal = Math.pow(od_cm / K, 2) - cR;
 
         document.getElementById('row_t').style.display = 'none';
