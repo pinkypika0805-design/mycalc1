@@ -38,7 +38,7 @@
         </div>
         <button class="btn-calc" style="background:#6366f1;" onclick="calcOD()">計算外徑</button>
         <div class="res-display" id="od_res" style="display:none;">
-            <div class="res-row"><span>預估外徑</span><span id="res_od_val" class="res-num">---</span><span>cm</span></div>
+            <div class="res-row"><span>預估總外徑</span><span id="res_od_val" class="res-num">---</span><span>cm</span></div>
             <div class="res-row"><span>單邊半徑</span><span id="res_r_val" class="res-num">---</span><span>cm</span></div>
         </div>
     </div>
@@ -50,8 +50,8 @@
             <div id="rb2" class="mode-btn" onclick="setRMode(2060, 9.6, 'rb2')">2060</div>
         </div>
         <div class="grid">
-            <div class="input-group"><label>外徑 (cm)</label><input type="number" id="rev_od" placeholder="cm" oninput="document.getElementById('rev_side').value=''"></div>
-            <div class="input-group"><label>單邊半徑 (cm)</label><input type="number" id="rev_side" placeholder="cm" oninput="document.getElementById('rev_od').value=''"></div>
+            <div class="input-group"><label>量測外徑 (cm)</label><input type="number" id="rev_od" placeholder="cm" oninput="document.getElementById('rev_side').value=''"></div>
+            <div class="input-group"><label>量測單邊半徑 (cm)</label><input type="number" id="rev_side" placeholder="cm" oninput="document.getElementById('rev_od').value=''"></div>
         </div>
         <div class="grid" style="margin-top:10px; border-top:1px dashed #eee; padding-top:10px;">
             <div class="input-group"><label>已知米數 (L)</label><input type="number" id="rev_l" placeholder="M" oninput="document.getElementById('rev_t').value=''"></div>
@@ -76,43 +76,46 @@
         document.getElementById(id).classList.add('active');
     }
 
+    // 修正後的外徑計算 (確保 cm 數值正確)
     function calcOD() {
         const l = parseFloat(document.getElementById('ol').value);
         const t = parseFloat(document.getElementById('ot').value);
         if(!l || !t) return;
-        // 核心公式：OD(mm) = (sqrt(L*T*318.31 + C) / 12.7) * 2.54
+        
+        // 原始公式結果為 mm
         const od_mm = (Math.sqrt(l * t * 318.31 + cO) / 12.7) * 2.54;
         const r_mm = (od_mm - mO) / 2;
+        
+        // 顯示為 cm (mm 除以 10)
         document.getElementById('res_od_val').innerText = (od_mm / 10).toFixed(2);
         document.getElementById('res_r_val').innerText = (r_mm / 10).toFixed(2);
         document.getElementById('od_res').style.display = 'block';
     }
 
+    // 修正後的雙向回推 (確保 mm/cm 轉換無位數落差)
     function calcDual() {
         let od_cm = parseFloat(document.getElementById('rev_od').value);
         const side_cm = parseFloat(document.getElementById('rev_side').value);
         const known_l = parseFloat(document.getElementById('rev_l').value);
         const known_t = parseFloat(document.getElementById('rev_t').value);
 
-        // 1. 換算回總外徑 mm
+        // 將輸入的 cm 轉回 mm 進入核心公式
         if (!od_cm && side_cm) od_cm = (side_cm * 2) + (mR / 10);
-        if (!od_cm) return alert("請輸入尺寸");
+        if (!od_cm) return alert("請輸入量測數值");
         const od_mm = od_cm * 10;
 
         document.getElementById('row_t').style.display = 'none';
         document.getElementById('row_l').style.display = 'none';
 
-        // 2. 核心公式逆運算：( (OD/2.54)*12.7 )^2 - C
-        const coreVolume = Math.pow((od_mm / 2.54) * 12.7, 2) - cR;
+        // 核心公式逆運算 (所有變數皆為原始 mm/M 單位)
+        const coreVal = Math.pow((od_mm / 2.54) * 12.7, 2) - cR;
 
         if (known_l) {
-            // T = coreVolume / (L * 318.31)
-            const t = coreVolume / (known_l * 318.31);
+            const t = coreVal / (known_l * 318.31);
             document.getElementById('res_t_val').innerText = t.toFixed(5);
             document.getElementById('row_t').style.display = 'flex';
         } else if (known_t) {
-            // L = coreVolume / (T * 318.31)
-            const l = coreVolume / (known_t * 318.31);
+            const l = coreVal / (known_t * 318.31);
             document.getElementById('res_l_val').innerText = Math.round(l);
             document.getElementById('row_l').style.display = 'flex';
         }
