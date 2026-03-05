@@ -22,7 +22,7 @@
         .res-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
         .res-num { font-size: 1.35rem; font-weight: 800; color: #0284c7; font-family: 'Courier New', monospace; }
         .btn-calc { width: 100%; padding: 15px; background: var(--secondary); color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; margin-top: 10px; cursor: pointer; }
-        .btn-calc:active { transform: scale(0.98); opacity: 0.9; }
+        .hint { font-size: 0.7rem; color: #94a3b8; margin-top: 5px; }
     </style>
 </head>
 <body>
@@ -32,13 +32,15 @@
         <h2>📏 厚度回推計算</h2>
         <div class="input-group"><label>選擇捲心規格 (C)</label></div>
         <div class="mode-box">
-            <div id="rb1" class="mode-btn active" onclick="setRMode(7060, 'rb1')">7060</div>
-            <div id="rb2" class="mode-btn" onclick="setRMode(2060, 'rb2')">2060</div>
+            <div id="rb1" class="mode-btn active" onclick="setRMode(7060, 17.6, 'rb1')">7060</div>
+            <div id="rb2" class="mode-btn" onclick="setRMode(2060, 9.6, 'rb2')">2060</div>
         </div>
-        <div class="grid">
-            <div class="input-group"><label>成品外徑 (mm)</label><input type="number" id="rev_od" placeholder="例如: 150"></div>
-            <div class="input-group"><label>實際米數 (L)</label><input type="number" id="rev_l" placeholder="例如: 2000"></div>
+        <div class="input-group"><label>實際米數 (L)</label><input type="number" id="rev_l" placeholder="輸入米數"></div>
+        <div class="grid" style="margin-top:10px;">
+            <div class="input-group"><label>量測總外徑 (OD)</label><input type="number" id="rev_od" placeholder="mm" oninput="clearOthers('od')"></div>
+            <div class="input-group"><label>或 量測單邊半徑</label><input type="number" id="rev_side" placeholder="mm" oninput="clearOthers('side')"></div>
         </div>
+        <div class="hint">* 填入總外徑或單邊半徑其中一個即可</div>
         <button class="btn-calc" onclick="calcReverse()">執行回推</button>
         <div class="res-display" id="rev_res" style="display:none; background:#ecfdf5; border-color:#a7f3d0;">
             <div class="res-row"><span class="res-label" style="color:#065f46;">計算厚度 (T)</span><span id="res_t" class="res-num" style="color:#059669;">---</span></div>
@@ -47,7 +49,6 @@
 
     <div class="card">
         <h2>🌀 捲繞外徑計算</h2>
-        <div class="input-group"><label>選擇捲心規格 (C)</label></div>
         <div class="mode-box">
             <div id="ob1" class="mode-btn active" onclick="setOMode(7060, 17.6, 'ob1')">7060</div>
             <div id="ob2" class="mode-btn" onclick="setOMode(2060, 9.6, 'ob2')">2060</div>
@@ -58,50 +59,53 @@
         </div>
         <button class="btn-calc" style="background:#6366f1;" onclick="calcOD()">執行計算</button>
         <div class="res-display" id="od_res" style="display:none;">
-            <div class="res-row"><span class="res-label">外徑 (OD)</span><span id="res_od_val" class="res-num">---</span></div>
+            <div class="res-row"><span class="res-label">預估總外徑 (OD)</span><span id="res_od_val" class="res-num">---</span></div>
             <div class="res-row"><span class="res-label">單邊半徑</span><span id="res_r_val" class="res-num">---</span></div>
         </div>
     </div>
 </div>
 
 <script>
-    let curRC = 7060;
+    let curRC = 7060, curRM = 17.6;
     let curOC = 7060, curOM = 17.6;
 
-    // 厚度回推模式切換
-    function setRMode(c, id) {
-        curRC = c;
+    function setRMode(c, m, id) {
+        curRC = c; curRM = m;
         document.querySelectorAll('[id^="rb"]').forEach(b => b.classList.remove('active'));
         document.getElementById(id).classList.add('active');
     }
 
-    // 外徑計算模式切換
     function setOMode(c, m, id) {
         curOC = c; curOM = m;
         document.querySelectorAll('[id^="ob"]').forEach(b => b.classList.remove('active'));
         document.getElementById(id).classList.add('active');
     }
 
-    // 厚度回推邏輯
+    function clearOthers(type) {
+        if (type === 'od') document.getElementById('rev_side').value = "";
+        if (type === 'side') document.getElementById('rev_od').value = "";
+    }
+
     function calcReverse() {
-        const od = parseFloat(document.getElementById('rev_od').value);
+        let od = parseFloat(document.getElementById('rev_od').value);
+        const side = parseFloat(document.getElementById('rev_side').value);
         const l = parseFloat(document.getElementById('rev_l').value);
-        if(!od || !l) { alert("請輸入外徑與米數"); return; }
         
-        // 公式：T = ((OD / 2.54 * 12.7)^2 - C) / (L * 318.31)
+        // 如果輸入的是單邊半徑，換算成總外徑: (單邊半徑 * 2) + 管徑
+        if (!od && side) od = (side * 2) + curRM;
+        
+        if (!od || !l) { alert("請輸入量測值與米數"); return; }
+        
         const t = (Math.pow((od / 2.54 * 12.7), 2) - curRC) / (l * 318.31);
-        
         document.getElementById('res_t').innerText = t.toFixed(5);
         document.getElementById('rev_res').style.display = 'block';
     }
 
-    // 外徑計算邏輯
     function calcOD() {
         const l = parseFloat(document.getElementById('ol').value);
         const t = parseFloat(document.getElementById('ot').value);
         if(!l || !t) { alert("請輸入米數與厚度"); return; }
         
-        // 公式：OD = (sqrt(L * T * 318.31 + C) / 12.7) * 2.54
         const od = (Math.sqrt((l * t * 318.31) + curOC) / 12.7) * 2.54;
         const r = (od - curOM) / 2;
         
