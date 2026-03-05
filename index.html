@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>捲繞規格計算系統 - 修正版</title>
+    <title>捲繞規格計算系統</title>
     <style>
         :root { --primary: #2563eb; --secondary: #10b981; --bg: #f8fafc; --card: #ffffff; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -22,6 +22,7 @@
         .res-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
         .res-num { font-size: 1.35rem; font-weight: 800; color: #0284c7; font-family: 'Courier New', monospace; }
         .btn-calc { width: 100%; padding: 15px; background: var(--secondary); color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; margin-top: 10px; cursor: pointer; }
+        .hint { font-size: 0.7rem; color: #94a3b8; margin-top: 5px; }
     </style>
 </head>
 <body>
@@ -57,7 +58,7 @@
             <div class="input-group"><label>單邊半徑 (cm)</label><input type="number" id="rev_side" placeholder="cm" oninput="document.getElementById('rev_od').value=''"></div>
         </div>
 
-        <div style="border-top: 1px dashed #ddd; margin: 15px 0;"></div>
+        <div class="hr" style="border-top: 1px dashed #ddd; margin: 15px 0;"></div>
 
         <label style="font-size: 0.75rem; color: #64748b; font-weight: bold;">2. 輸入已知條件 (二選一)</label>
         <div class="grid" style="margin-top:5px;">
@@ -96,12 +97,11 @@
         const t = parseFloat(document.getElementById('ot').value);
         if(!l || !t) return alert("請輸入米數與厚度");
         
-        // 核心公式：修正單位換算，不再除以 12.7 * 2.54
-        // od_mm 單位為毫米
-        const od_mm = Math.sqrt((l * t * 318.31) + cO);
+        // 公式運算 (內部維持 mm)
+        const od_mm = (Math.sqrt((l * t * 318.31) + cO) / 12.7) * 2.54;
         const r_mm = (od_mm - mO) / 2;
         
-        // 輸出轉換為 cm (除以 10)
+        // 輸出轉換為 cm
         document.getElementById('res_od_val').innerText = (od_mm / 10).toFixed(2);
         document.getElementById('res_r_val').innerText = (r_mm / 10).toFixed(2);
         document.getElementById('od_res').style.display = 'block';
@@ -115,11 +115,8 @@
         const known_t = parseFloat(document.getElementById('rev_t').value);
 
         // 1. 決定總外徑 (轉成 mm 進入公式)
-        if (!od_cm && side_cm) {
-            od_cm = (side_cm * 2) + (mR / 10);
-        }
+        if (!od_cm && side_cm) od_cm = (side_cm * 2) + (mR / 10);
         if (!od_cm) return alert("請輸入量測尺寸 (外徑或半徑)");
-        
         const od_mm = od_cm * 10;
 
         document.getElementById('row_t').style.display = 'none';
@@ -128,12 +125,12 @@
         // 2. 判斷是求 T 還是求 L
         if (known_l) {
             // 已知 L 求 T
-            const t = (Math.pow(od_mm, 2) - cR) / (known_l * 318.31);
+            const t = (Math.pow((od_mm / 2.54 * 12.7), 2) - cR) / (known_l * 318.31);
             document.getElementById('res_t_val').innerText = t.toFixed(5);
             document.getElementById('row_t').style.display = 'flex';
         } else if (known_t) {
             // 已知 T 求 L
-            const l = (Math.pow(od_mm, 2) - cR) / (known_t * 318.31);
+            const l = (Math.pow((od_mm / 2.54 * 12.7), 2) - cR) / (known_t * 318.31);
             document.getElementById('res_l_val').innerText = Math.round(l);
             document.getElementById('row_l').style.display = 'flex';
         } else {
