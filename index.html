@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>捲繞規格全功能計算</title>
+    <title>捲繞規格計算系統</title>
     <style>
-        :root { --primary: #2563eb; --secondary: #10b981; --accent: #f59e0b; --bg: #f8fafc; --card: #ffffff; }
+        :root { --primary: #2563eb; --secondary: #10b981; --bg: #f8fafc; --card: #ffffff; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: #1e293b; margin: 0; padding: 15px; }
         .container { max-width: 500px; margin: 0 auto; }
@@ -22,27 +22,12 @@
         .res-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
         .res-num { font-size: 1.35rem; font-weight: 800; color: #0284c7; font-family: 'Courier New', monospace; }
         .btn-calc { width: 100%; padding: 15px; background: var(--secondary); color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; margin-top: 10px; cursor: pointer; }
+        .hint { font-size: 0.7rem; color: #94a3b8; margin-top: 5px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="card" style="border-top: 5px solid var(--accent);">
-        <h2>估算剩下米數 (L)</h2>
-        <div class="mode-box">
-            <div id="lb1" class="mode-btn active" onclick="setLMode(7060, 17.6, 'lb1')">7060</div>
-            <div id="lb2" class="mode-btn" onclick="setLMode(2060, 9.6, 'lb2')">2060</div>
-        </div>
-        <div class="grid">
-            <div class="input-group"><label>已知厚度 (T)</label><input type="number" id="lt" placeholder="mm"></div>
-            <div class="input-group"><label>單邊半徑 (R)</label><input type="number" id="lr" placeholder="mm"></div>
-        </div>
-        <button class="btn-calc" style="background: var(--accent);" onclick="calcL()">計算剩餘米數</button>
-        <div class="res-display" id="l_res" style="display:none; background:#fffbeb; border-color:#fef3c7;">
-            <div class="res-row"><span class="res-label" style="color:#92400e;">預估剩餘 (L)</span><span id="res_l_val" class="res-num" style="color:#d97706;">---</span><span style="color:#d97706; font-weight:bold;">M</span></div>
-        </div>
-    </div>
-
     <div class="card">
         <h2>🌀 捲繞外徑計算</h2>
         <div class="mode-box">
@@ -50,76 +35,109 @@
             <div id="ob2" class="mode-btn" onclick="setOMode(2060, 9.6, 'ob2')">2060</div>
         </div>
         <div class="grid">
-            <div class="input-group"><label>米數 (L)</label><input type="number" id="ol" placeholder="0"></div>
-            <div class="input-group"><label>厚度 (T)</label><input type="number" id="ot" placeholder="0"></div>
+            <div class="input-group"><label>輸入米數 (L)</label><input type="number" id="ol" placeholder="M"></div>
+            <div class="input-group"><label>輸入厚度 (T)</label><input type="number" id="ot" placeholder="mm"></div>
         </div>
-        <button class="btn-calc" style="background:#6366f1;" onclick="calcOD()">計算外徑</button>
+        <button class="btn-calc" style="background:#6366f1;" onclick="calcOD()">執行計算</button>
         <div class="res-display" id="od_res" style="display:none;">
-            <div class="res-row"><span class="res-label">預估外徑 (OD)</span><span id="res_od_val" class="res-num">---</span></div>
-            <div class="res-row"><span class="res-label">單邊半徑</span><span id="res_r_val" class="res-num">---</span></div>
+            <div class="res-row"><span class="res-label">預估總外徑</span><span id="res_od_val" class="res-num">---</span><span class="res-label">cm</span></div>
+            <div class="res-row"><span class="res-label">單邊半徑</span><span id="res_r_val" class="res-num">---</span><span class="res-label">cm</span></div>
         </div>
     </div>
 
     <div class="card">
-        <h2>📏 厚度回推計算</h2>
+        <h2>📏 雙向回推計算</h2>
         <div class="mode-box">
             <div id="rb1" class="mode-btn active" onclick="setRMode(7060, 17.6, 'rb1')">7060</div>
             <div id="rb2" class="mode-btn" onclick="setRMode(2060, 9.6, 'rb2')">2060</div>
         </div>
-        <div class="input-group"><label>實際米數 (L)</label><input type="number" id="rev_l" placeholder="M"></div>
-        <div class="grid" style="margin-top:10px;">
-            <div class="input-group"><label>量測外徑 (OD)</label><input type="number" id="rev_od" oninput="document.getElementById('rev_side').value=''"></div>
-            <div class="input-group"><label>量測單邊半徑</label><input type="number" id="rev_side" oninput="document.getElementById('rev_od').value=''"></div>
+        
+        <label style="font-size: 0.75rem; color: #64748b; font-weight: bold;">1. 量測成品尺寸 (cm)</label>
+        <div class="grid" style="margin-top:5px;">
+            <div class="input-group"><label>總外徑 (cm)</label><input type="number" id="rev_od" placeholder="cm" oninput="document.getElementById('rev_side').value=''"></div>
+            <div class="input-group"><label>單邊半徑 (cm)</label><input type="number" id="rev_side" placeholder="cm" oninput="document.getElementById('rev_od').value=''"></div>
         </div>
-        <button class="btn-calc" onclick="calcReverse()">回推厚度</button>
-        <div class="res-display" id="rev_res" style="display:none; background:#ecfdf5; border-color:#a7f3d0;">
-            <div class="res-row"><span class="res-label" style="color:#065f46;">計算厚度 (T)</span><span id="res_t" class="res-num" style="color:#059669;">---</span></div>
+
+        <div class="hr" style="border-top: 1px dashed #ddd; margin: 15px 0;"></div>
+
+        <label style="font-size: 0.75rem; color: #64748b; font-weight: bold;">2. 輸入已知條件 (二選一)</label>
+        <div class="grid" style="margin-top:5px;">
+            <div class="input-group"><label>已知米數 (L)</label><input type="number" id="rev_l" placeholder="M" oninput="document.getElementById('rev_t').value=''"></div>
+            <div class="input-group"><label>已知厚度 (T)</label><input type="number" id="rev_t" placeholder="mm" oninput="document.getElementById('rev_l').value=''"></div>
+        </div>
+
+        <button class="btn-calc" onclick="calcDual()">執行回推</button>
+        
+        <div class="res-display" id="dual_res" style="display:none; background:#ecfdf5; border-color:#a7f3d0;">
+            <div class="res-row" id="row_t"><span class="res-label" style="color:#065f46;">計算厚度 (T)</span><span id="res_t_val" class="res-num" style="color:#059669;">---</span><span style="color:#059669; font-weight:bold;">mm</span></div>
+            <div class="res-row" id="row_l"><span class="res-label" style="color:#065f46;">計算米數 (L)</span><span id="res_l_val" class="res-num" style="color:#059669;">---</span><span style="color:#059669; font-weight:bold;">M</span></div>
         </div>
     </div>
 </div>
 
 <script>
-    let cL = 7060, mL = 17.6;
     let cO = 7060, mO = 17.6;
     let cR = 7060, mR = 17.6;
 
-    function setLMode(c, m, id) { cL = c; mL = m; setActive('lb', id); }
-    function setOMode(c, m, id) { cO = c; mO = m; setActive('ob', id); }
-    function setRMode(c, m, id) { cR = c; mR = m; setActive('rb', id); }
-    function setActive(prefix, id) {
-        document.querySelectorAll(`[id^="${prefix}"]`).forEach(b => b.classList.remove('active'));
+    function setOMode(c, m, id) {
+        cO = c; mO = m;
+        document.querySelectorAll('[id^="ob"]').forEach(b => b.classList.remove('active'));
         document.getElementById(id).classList.add('active');
     }
 
-    function calcL() {
-        const t = parseFloat(document.getElementById('lt').value);
-        const r = parseFloat(document.getElementById('lr').value);
-        if(!t || !r) return alert("請輸入厚度與單邊半徑");
-        const od = (r * 2) + mL;
-        const l = (Math.pow((od / 2.54 * 12.7), 2) - cL) / (t * 318.31);
-        document.getElementById('res_l_val').innerText = Math.round(l);
-        document.getElementById('l_res').style.display = 'block';
+    function setRMode(c, m, id) {
+        cR = c; mR = m;
+        document.querySelectorAll('[id^="rb"]').forEach(b => b.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
     }
 
+    // 🌀 外徑計算
     function calcOD() {
         const l = parseFloat(document.getElementById('ol').value);
         const t = parseFloat(document.getElementById('ot').value);
         if(!l || !t) return alert("請輸入米數與厚度");
-        const od = (Math.sqrt((l * t * 318.31) + cO) / 12.7) * 2.54;
-        document.getElementById('res_od_val').innerText = od.toFixed(2);
-        document.getElementById('res_r_val').innerText = ((od - mO) / 2).toFixed(2);
+        
+        // 公式運算 (內部維持 mm)
+        const od_mm = (Math.sqrt((l * t * 318.31) + cO) / 12.7) * 2.54;
+        const r_mm = (od_mm - mO) / 2;
+        
+        // 輸出轉換為 cm
+        document.getElementById('res_od_val').innerText = (od_mm / 10).toFixed(2);
+        document.getElementById('res_r_val').innerText = (r_mm / 10).toFixed(2);
         document.getElementById('od_res').style.display = 'block';
     }
 
-    function calcReverse() {
-        let od = parseFloat(document.getElementById('rev_od').value);
-        const side = parseFloat(document.getElementById('rev_side').value);
-        const l = parseFloat(document.getElementById('rev_l').value);
-        if(!od && side) od = (side * 2) + mR;
-        if(!od || !l) return alert("請輸入量測值與米數");
-        const t = (Math.pow((od / 2.54 * 12.7), 2) - cR) / (l * 318.31);
-        document.getElementById('res_t').innerText = t.toFixed(5);
-        document.getElementById('rev_res').style.display = 'block';
+    // 📏 雙向回推計算
+    function calcDual() {
+        let od_cm = parseFloat(document.getElementById('rev_od').value);
+        const side_cm = parseFloat(document.getElementById('rev_side').value);
+        const known_l = parseFloat(document.getElementById('rev_l').value);
+        const known_t = parseFloat(document.getElementById('rev_t').value);
+
+        // 1. 決定總外徑 (轉成 mm 進入公式)
+        if (!od_cm && side_cm) od_cm = (side_cm * 2) + (mR / 10);
+        if (!od_cm) return alert("請輸入量測尺寸 (外徑或半徑)");
+        const od_mm = od_cm * 10;
+
+        document.getElementById('row_t').style.display = 'none';
+        document.getElementById('row_l').style.display = 'none';
+
+        // 2. 判斷是求 T 還是求 L
+        if (known_l) {
+            // 已知 L 求 T
+            const t = (Math.pow((od_mm / 2.54 * 12.7), 2) - cR) / (known_l * 318.31);
+            document.getElementById('res_t_val').innerText = t.toFixed(5);
+            document.getElementById('row_t').style.display = 'flex';
+        } else if (known_t) {
+            // 已知 T 求 L
+            const l = (Math.pow((od_mm / 2.54 * 12.7), 2) - cR) / (known_t * 318.31);
+            document.getElementById('res_l_val').innerText = Math.round(l);
+            document.getElementById('row_l').style.display = 'flex';
+        } else {
+            return alert("請輸入已知米數或已知厚度");
+        }
+
+        document.getElementById('dual_res').style.display = 'block';
     }
 </script>
 </body>
