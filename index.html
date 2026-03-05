@@ -76,14 +76,17 @@
         document.getElementById(id).classList.add('active');
     }
 
-    const K = 0.063351; // 鎖定你提供的 39.9cm 基準
-
+    // 基於 8000M/0.153T = 39.9cm 校正後的公式
     function calcOD() {
         const l = parseFloat(document.getElementById('ol').value);
         const t = parseFloat(document.getElementById('ot').value);
         if(!l || !t) return;
-        const base = Math.sqrt(l * t * 318.31 + cO);
-        const od_cm = base * K;
+        
+        // 校正係數：39.9 / sqrt(8000*0.153*318.31 + 7060) ≈ 0.06334
+        // 套回原始公式：sqrt(...) * 0.06334 = OD (cm)
+        const val = Math.sqrt(l * t * 318.31 + cO);
+        const od_cm = val * 0.06337; 
+        
         document.getElementById('res_od_val').innerText = od_cm.toFixed(2);
         document.getElementById('res_r_val').innerText = ((od_cm - mO) / 2).toFixed(2);
         document.getElementById('od_res').style.display = 'block';
@@ -95,11 +98,11 @@
         const known_l = parseFloat(document.getElementById('rev_l').value);
         const known_t = parseFloat(document.getElementById('rev_t').value);
 
-        // 如果輸入的是單邊半徑(cm)，換算成總徑(cm)
         if (!od_cm && side_cm) od_cm = (side_cm * 2) + mR;
-        if (!od_cm) return alert("請輸入量測數值");
+        if (!od_cm) return alert("請輸入尺寸");
 
-        const coreVal = Math.pow(od_cm / K, 2) - cR;
+        // 逆向係數： (OD / 0.06337)^2
+        const coreVal = Math.pow(od_cm / 0.06337, 2) - cR;
 
         document.getElementById('row_t').style.display = 'none';
         document.getElementById('row_l').style.display = 'none';
