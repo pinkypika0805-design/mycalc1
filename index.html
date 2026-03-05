@@ -29,35 +29,35 @@
     <div class="card">
         <h2>🌀 捲繞外徑計算</h2>
         <div class="mode-box">
-            <div id="ob1" class="mode-btn active" onclick="setOMode(7060, 1.76, 'ob1')">7060</div>
-            <div id="ob2" class="mode-btn" onclick="setOMode(2060, 0.96, 'ob2')">2060</div>
+            <div id="ob1" class="mode-btn active" onclick="setOMode(7060, 17.6, 'ob1')">7060</div>
+            <div id="ob2" class="mode-btn" onclick="setOMode(2060, 9.6, 'ob2')">2060</div>
         </div>
         <div class="grid">
             <div class="input-group"><label>米數 (L)</label><input type="number" id="ol" placeholder="M"></div>
             <div class="input-group"><label>厚度 (T)</label><input type="number" id="ot" placeholder="mm"></div>
         </div>
-        <button class="btn-calc" style="background:#6366f1;" onclick="calcOD()">計算外徑</button>
+        <button class="btn-calc" style="background:#6366f1;" onclick="calcOD()">計算預估尺寸</button>
         <div class="res-display" id="od_res" style="display:none;">
-            <div class="res-row"><span>預估總外徑</span><span id="res_od_val" class="res-num">---</span><span>cm</span></div>
-            <div class="res-row"><span>單邊半徑</span><span id="res_r_val" class="res-num">---</span><span>cm</span></div>
+            <div class="res-row"><span>單邊半徑 (R)</span><span id="res_r_val" class="res-num" style="color: #e11d48;">---</span><span>cm</span></div>
+            <div class="res-row"><span>總外徑 (OD)</span><span id="res_od_val" class="res-num">---</span><span>cm</span></div>
         </div>
     </div>
 
     <div class="card">
         <h2>📏 雙向回推計算</h2>
         <div class="mode-box">
-            <div id="rb1" class="mode-btn active" onclick="setRMode(7060, 1.76, 'rb1')">7060</div>
-            <div id="rb2" class="mode-btn" onclick="setRMode(2060, 0.96, 'rb2')">2060</div>
+            <div id="rb1" class="mode-btn active" onclick="setRMode(7060, 17.6, 'rb1')">7060</div>
+            <div id="rb2" class="mode-btn" onclick="setRMode(2060, 9.6, 'rb2')">2060</div>
         </div>
         <div class="grid">
-            <div class="input-group"><label>量測外徑 (cm)</label><input type="number" id="rev_od" placeholder="cm" oninput="document.getElementById('rev_side').value=''"></div>
             <div class="input-group"><label>單邊半徑 (cm)</label><input type="number" id="rev_side" placeholder="cm" oninput="document.getElementById('rev_od').value=''"></div>
+            <div class="input-group"><label>總外徑 (cm)</label><input type="number" id="rev_od" placeholder="cm" oninput="document.getElementById('rev_side').value=''"></div>
         </div>
         <div class="grid" style="margin-top:10px; border-top:1px dashed #eee; padding-top:10px;">
             <div class="input-group"><label>已知米數 (L)</label><input type="number" id="rev_l" placeholder="M" oninput="document.getElementById('rev_t').value=''"></div>
             <div class="input-group"><label>已知厚度 (T)</label><input type="number" id="rev_t" placeholder="mm" oninput="document.getElementById('rev_l').value=''"></div>
         </div>
-        <button class="btn-calc" onclick="calcDual()">執行回推</button>
+        <button class="btn-calc" onclick="calcDual()">執行雙向回推</button>
         <div class="res-display" id="dual_res" style="display:none; background:#ecfdf5; border-color:#a7f3d0;">
             <div class="res-row" id="row_t"><span>計算厚度 (T)</span><span id="res_t_val" class="res-num" style="color:#059669;">---</span><span>mm</span></div>
             <div class="res-row" id="row_l"><span>計算米數 (L)</span><span id="res_l_val" class="res-num" style="color:#059669;">---</span><span>M</span></div>
@@ -66,57 +66,56 @@
 </div>
 
 <script>
-    // 這裡的 mO 和 mR 統一改為 cm 單位
-    let cO = 7060, mO = 1.76;
-    let cR = 7060, mR = 1.76;
+    let cO = 7060, mO = 17.6;
+    let cR = 7060, mR = 17.6;
+    const FACTOR = 318.31; // 嚴格遵守原始係數
 
-    function setOMode(c, m, id) { cO = c; mO = m / 10; setActive('ob', id); }
-    function setRMode(c, m, id) { cR = c; mR = m / 10; setActive('rb', id); }
+    function setOMode(c, m, id) { cO = c; mO = m; setActive('ob', id); }
+    function setRMode(c, m, id) { cR = c; mR = m; setActive('rb', id); }
     function setActive(pre, id) {
         document.querySelectorAll(`[id^="${pre}"]`).forEach(b => b.classList.remove('active'));
         document.getElementById(id).classList.add('active');
     }
-
-    // 關鍵常數校準：基於 8000M/0.153T = 39.9cm
-    const K = 0.063351;
 
     function calcOD() {
         const l = parseFloat(document.getElementById('ol').value);
         const t = parseFloat(document.getElementById('ot').value);
         if(!l || !t) return;
         
-        // 1. 算出底數
-        const base = Math.sqrt(l * t * 318.31 + cO);
-        // 2. 乘上校準係數得到 cm
-        const od_cm = base * K;
+        // 1. 總外徑 mm
+        const od_mm = (Math.sqrt(l * t * FACTOR + cO) / 12.7) * 25.4;
+        const od_cm = od_mm / 10;
         
+        // 2. 單邊半徑 cm (扣除管徑後除以 2)
+        const r_cm = (od_mm - mO) / 2 / 10;
+        
+        document.getElementById('res_r_val').innerText = r_cm.toFixed(2);
         document.getElementById('res_od_val').innerText = od_cm.toFixed(2);
-        document.getElementById('res_r_val').innerText = ((od_cm - mO) / 2).toFixed(2);
         document.getElementById('od_res').style.display = 'block';
     }
 
     function calcDual() {
+        let side_cm = parseFloat(document.getElementById('rev_side').value);
         let od_cm = parseFloat(document.getElementById('rev_od').value);
-        const side_cm = parseFloat(document.getElementById('rev_side').value);
         const known_l = parseFloat(document.getElementById('rev_l').value);
         const known_t = parseFloat(document.getElementById('rev_t').value);
 
-        // 如果輸入的是單邊半徑(cm)，換算成總徑(cm)
-        if (!od_cm && side_cm) od_cm = (side_cm * 2) + mR;
+        // 如果輸入單邊半徑(cm)，轉回總徑 mm
+        if (!od_cm && side_cm) od_cm = (side_cm * 2) + (mR / 10);
         if (!od_cm) return alert("請輸入尺寸");
-
-        // 逆向還原底數
-        const coreVal = Math.pow(od_cm / K, 2) - cR;
+        
+        const od_mm = od_cm * 10;
+        const coreVal = Math.pow((od_mm / 25.4) * 12.7, 2) - cR;
 
         document.getElementById('row_t').style.display = 'none';
         document.getElementById('row_l').style.display = 'none';
 
         if (known_l) {
-            const t = coreVal / (known_l * 318.31);
+            const t = coreVal / (known_l * FACTOR);
             document.getElementById('res_t_val').innerText = t.toFixed(5);
             document.getElementById('row_t').style.display = 'flex';
         } else if (known_t) {
-            const l = coreVal / (known_t * 318.31);
+            const l = coreVal / (known_t * FACTOR);
             document.getElementById('res_l_val').innerText = Math.round(l);
             document.getElementById('row_l').style.display = 'flex';
         }
