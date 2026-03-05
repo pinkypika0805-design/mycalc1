@@ -80,7 +80,8 @@
         const l = parseFloat(document.getElementById('ol').value);
         const t = parseFloat(document.getElementById('ot').value);
         if(!l || !t) return;
-        const od_mm = (Math.sqrt((l * t * 318.31) + cO) / 12.7) * 2.54;
+        // 核心公式：OD(mm) = (sqrt(L*T*318.31 + C) / 12.7) * 2.54
+        const od_mm = (Math.sqrt(l * t * 318.31 + cO) / 12.7) * 2.54;
         const r_mm = (od_mm - mO) / 2;
         document.getElementById('res_od_val').innerText = (od_mm / 10).toFixed(2);
         document.getElementById('res_r_val').innerText = (r_mm / 10).toFixed(2);
@@ -93,21 +94,25 @@
         const known_l = parseFloat(document.getElementById('rev_l').value);
         const known_t = parseFloat(document.getElementById('rev_t').value);
 
+        // 1. 換算回總外徑 mm
         if (!od_cm && side_cm) od_cm = (side_cm * 2) + (mR / 10);
-        if (!od_cm) return alert("請輸入尺寸 (cm)");
+        if (!od_cm) return alert("請輸入尺寸");
         const od_mm = od_cm * 10;
 
         document.getElementById('row_t').style.display = 'none';
         document.getElementById('row_l').style.display = 'none';
 
-        const core = Math.pow((od_mm / 2.54 * 12.7), 2) - cR;
+        // 2. 核心公式逆運算：( (OD/2.54)*12.7 )^2 - C
+        const coreVolume = Math.pow((od_mm / 2.54) * 12.7, 2) - cR;
 
         if (known_l) {
-            const t = core / (known_l * 318.31);
+            // T = coreVolume / (L * 318.31)
+            const t = coreVolume / (known_l * 318.31);
             document.getElementById('res_t_val').innerText = t.toFixed(5);
             document.getElementById('row_t').style.display = 'flex';
         } else if (known_t) {
-            const l = core / (known_t * 318.31);
+            // L = coreVolume / (T * 318.31)
+            const l = coreVolume / (known_t * 318.31);
             document.getElementById('res_l_val').innerText = Math.round(l);
             document.getElementById('row_l').style.display = 'flex';
         }
