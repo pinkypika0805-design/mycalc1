@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>捲繞規格計算系統</title>
+    <style>
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, system-ui, sans-serif; background: #f0f2f5; margin: 0; padding: 15px; display: flex; justify-content: center; }
+        .card { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
+        h2 { text-align: center; color: #1a1a1a; margin-top: 0; font-size: 1.4rem; }
+        .input-group { margin-bottom: 18px; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; color: #444; font-size: 1rem; }
+        input { width: 100%; padding: 15px; border: 2px solid #eee; border-radius: 12px; font-size: 20px; background: #fafafa; transition: 0.3s; }
+        input:focus { border-color: #007bff; background: #fff; outline: none; }
+        .mode-label { font-weight: bold; color: #444; margin-bottom: 10px; display: block; }
+        .mode-box { display: flex; gap: 10px; margin-bottom: 20px; }
+        .mode-btn { flex: 1; padding: 15px; border: 2px solid #eee; border-radius: 12px; text-align: center; cursor: pointer; font-weight: bold; background: #fff; color: #666; transition: 0.2s; }
+        .mode-btn.active { background: #333; color: white; border-color: #333; }
+        .calc-btn { width: 100%; padding: 18px; background: #28a745; color: white; border: none; border-radius: 12px; font-size: 1.3rem; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.2s; }
+        .calc-btn:active { transform: scale(0.98); background: #218838; }
+        .res-container { margin-top: 25px; background: #fff9db; border: 2px solid #ffec99; border-radius: 15px; padding: 20px; display: none; animation: fadeIn 0.4s; }
+        .res-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid rgba(0,0,0,0.05); }
+        .res-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .res-label { color: #666; font-size: 1.1rem; }
+        .res-val { font-size: 1.6rem; font-weight: 900; color: #d9480f; font-family: 'Courier New', Courier, monospace; }
+        .res-val.main { color: #1971c2; font-size: 2rem; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>捲繞規格計算系統</h2>
+    
+    <div class="input-group">
+        <label>米數 (L)</label>
+        <input type="number" id="L" placeholder="例如: 1000" inputmode="decimal">
+    </div>
+    
+    <div class="input-group">
+        <label>厚度 (T)</label>
+        <input type="number" id="T" placeholder="例如: 0.05" inputmode="decimal">
+    </div>
+    
+    <span class="mode-label">選擇捲心規格 (C)</span>
+    <div class="mode-box">
+        <div id="c7060" class="mode-btn active" onclick="setMode(7060, 17.6, 'c7060')">7060 (-17.6)</div>
+        <div id="c2060" class="mode-btn" onclick="setMode(2060, 9.3, 'c2060')">2060 (-9.3)</div>
+    </div>
+
+    <button class="calc-btn" onclick="calculate()">執行計算</button>
+
+    <div id="result" class="res-container">
+        <div class="res-row">
+            <span class="res-label">外徑 (OD)</span>
+            <span id="v1" class="res-val main">0.00</span>
+        </div>
+        <div class="res-row">
+            <span class="res-label">單邊半徑</span>
+            <span id="v2" class="res-val">0.00</span>
+        </div>
+        <div class="res-row">
+            <span class="res-label">外周長 (捲徑)</span>
+            <span id="v3" class="res-val">0.00</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 預設值
+    var C = 7060;
+    var M = 17.6;
+
+    // 切換規格函數
+    function setMode(val, minus, id) {
+        C = val;
+        M = minus;
+        document.querySelectorAll('.mode-btn').forEach(function(btn) {
+            btn.classList.remove('active');
+        });
+        document.getElementById(id).classList.add('active');
+        
+        // 如果結果框已經顯示，切換時自動重算
+        if (document.getElementById('result').style.display === 'block') {
+            calculate();
+        }
+    }
+
+    // 主計算函數
+    function calculate() {
+        var lInput = document.getElementById('L').value;
+        var tInput = document.getElementById('T').value;
+        
+        if (!lInput || !tInput) {
+            alert("請完整輸入米數與厚度！");
+            return;
+        }
+
+        var l = parseFloat(lInput);
+        var t = parseFloat(tInput);
+
+        // 公式 1: 外徑 (OD) = sqrt(L * T * 318.31 + C) / 12.7 * 2.54
+        var od = (Math.sqrt((l * t * 318.31) + C) / 12.7) * 2.54;
+        
+        // 公式 2: 半徑 = (外徑 - 扣除值) / 2
+        var radius = (od - M) / 2;
+        
+        // 公式 3: 捲徑 (周長) = 外徑 * 3.1416
+        var circum = od * 3.1416;
+
+        // 填入數值並顯示
+        document.getElementById('v1').innerText = od.toFixed(2);
+        document.getElementById('v2').innerText = radius.toFixed(2);
+        document.getElementById('v3').innerText = circum.toFixed(2);
+        
+        document.getElementById('result').style.display = 'block';
+        
+        // 平滑滾動到結果區域
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    }
+</script>
+
+</body>
+</html>
