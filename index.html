@@ -68,7 +68,7 @@
 <script>
     let cO = 7060, mO = 17.6;
     let cR = 7060, mR = 17.6;
-    const FACTOR = 318.31; // 嚴格遵守原始係數
+    const FACTOR = 318.31; 
 
     function setOMode(c, m, id) { cO = c; mO = m; setActive('ob', id); }
     function setRMode(c, m, id) { cR = c; mR = m; setActive('rb', id); }
@@ -82,15 +82,15 @@
         const t = parseFloat(document.getElementById('ot').value);
         if(!l || !t) return;
         
-        // 1. 總外徑 mm
+        // 1. 先算總徑 mm
         const od_mm = (Math.sqrt(l * t * FACTOR + cO) / 12.7) * 25.4;
-        const od_cm = od_mm / 10;
         
-        // 2. 單邊半徑 cm (扣除管徑後除以 2)
+        // 2. 算單邊半徑 (cm): 這裡修正了順序 (OD - 捲心管徑) / 2
+        // 除以 10 是因為 od_mm 和 mO 都是公釐，我們要公分
         const r_cm = (od_mm - mO) / 2 / 10;
         
         document.getElementById('res_r_val').innerText = r_cm.toFixed(2);
-        document.getElementById('res_od_val').innerText = od_cm.toFixed(2);
+        document.getElementById('res_od_val').innerText = (od_mm / 10).toFixed(2);
         document.getElementById('od_res').style.display = 'block';
     }
 
@@ -100,8 +100,10 @@
         const known_l = parseFloat(document.getElementById('rev_l').value);
         const known_t = parseFloat(document.getElementById('rev_t').value);
 
-        // 如果輸入單邊半徑(cm)，轉回總徑 mm
-        if (!od_cm && side_cm) od_cm = (side_cm * 2) + (mR / 10);
+        // 如果輸入單邊半徑，轉回總徑 mm: (半徑 * 2 + 管徑)
+        if (!od_cm && side_cm) {
+            od_cm = (side_cm * 2) + (mR / 10);
+        }
         if (!od_cm) return alert("請輸入尺寸");
         
         const od_mm = od_cm * 10;
